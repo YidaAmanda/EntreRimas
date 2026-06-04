@@ -10,6 +10,16 @@
   (major1) == 0 && (major2) <  1 || \
   (major1) == 0 && (major2) == 1 && (minor) <= 0)
 #endif /* MIN_VERSION_SitePoesias */
+/* package aeson-2.2.5.0 */
+#ifndef VERSION_aeson
+#define VERSION_aeson "2.2.5.0"
+#endif /* VERSION_aeson */
+#ifndef MIN_VERSION_aeson
+#define MIN_VERSION_aeson(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  2 || \
+  (major1) == 2 && (major2) == 2 && (minor) <= 5)
+#endif /* MIN_VERSION_aeson */
 /* package base-4.18.3.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.18.3.0"
@@ -20,6 +30,16 @@
   (major1) == 4 && (major2) <  18 || \
   (major1) == 4 && (major2) == 18 && (minor) <= 3)
 #endif /* MIN_VERSION_base */
+/* package postgresql-simple-0.7.0.1 */
+#ifndef VERSION_postgresql_simple
+#define VERSION_postgresql_simple "0.7.0.1"
+#endif /* VERSION_postgresql_simple */
+#ifndef MIN_VERSION_postgresql_simple
+#define MIN_VERSION_postgresql_simple(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  7 || \
+  (major1) == 0 && (major2) == 7 && (minor) <= 0)
+#endif /* MIN_VERSION_postgresql_simple */
 /* package servant-0.20.3.0 */
 #ifndef VERSION_servant
 #define VERSION_servant "0.20.3.0"
@@ -50,6 +70,16 @@
   (major1) == 3 && (major2) <  2 || \
   (major1) == 3 && (major2) == 2 && (minor) <= 4)
 #endif /* MIN_VERSION_wai */
+/* package wai-cors-0.2.7 */
+#ifndef VERSION_wai_cors
+#define VERSION_wai_cors "0.2.7"
+#endif /* VERSION_wai_cors */
+#ifndef MIN_VERSION_wai_cors
+#define MIN_VERSION_wai_cors(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  2 || \
+  (major1) == 0 && (major2) == 2 && (minor) <= 7)
+#endif /* MIN_VERSION_wai_cors */
 /* package warp-3.4.13.1 */
 #ifndef VERSION_warp
 #define VERSION_warp "3.4.13.1"

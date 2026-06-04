@@ -1,6 +1,5 @@
 module Types.Models where
 
-
 data User = User{
     id_user :: Int,
     nome :: String,
