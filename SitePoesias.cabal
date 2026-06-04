@@ -20,7 +20,8 @@ executable SitePoesias
     import:           warnings
     main-is:          Main.hs
     other-modules:    Server.Handler
-                      Types.Examples
+                      Types.Models
+                      Database.Queries
     -- other-extensions:
     build-depends:    base,
                       wai,
