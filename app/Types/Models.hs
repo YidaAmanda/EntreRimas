@@ -9,8 +9,8 @@ data User = User{
 
 data Post = Post{
     id_post :: Int,
-    id_user :: Int,
-    texto :: String,
+    id_user_post :: Int,
+    txt_post :: String,
     ic_comment :: String
 }
 
@@ -22,19 +22,19 @@ data Follow = Follow{
 
 data Favorite = Favorite{
     id_favorite :: Int,
-    id_user :: Int,
-    id_post :: Int
+    id_user_fav :: Int,
+    id_post_fav :: Int
 }
 
 data Comment = Comment{
     id_comment :: Int,
-    id_user :: Int,
-    id_post :: Int,
-    texto :: String
+    id_user_com :: Int,
+    id_post_com :: Int,
+    txt_comment :: String
 }
 
 data Like = Like{
     id_like :: Int,
-    id_user :: Int,
-    id_post :: Int
+    id_user_like :: Int,
+    id_post_like :: Int
 }
