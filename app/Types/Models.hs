@@ -1,39 +1,63 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Types.Models where
 
-data User = User{
+import GHC.Generics
+import Data.Aeson
+
+data Users = Users{
     id_user :: Int,
     nome :: String,
     senha :: String
-}
+} deriving (Show, Generic)
 
-data Post = Post{
+instance ToJSON Users
+instance FromJSON Users
+
+data Posts = Posts{
     id_post :: Int,
     id_user_post :: Int,
     txt_post :: String,
+    txt_title :: String,
     ic_comment :: String
-}
+} deriving (Show, Generic)
 
-data Follow = Follow{
+instance ToJSON Posts
+instance FromJSON Posts
+
+data Follows = Follows{
     id_follow :: Int,
     id_seguidor :: Int,
     id_seguido :: Int
-}
+} deriving (Show, Generic)
 
-data Favorite = Favorite{
+instance ToJSON Follows
+instance FromJSON Follows
+
+data Favorites = Favorites{
     id_favorite :: Int,
     id_user_fav :: Int,
     id_post_fav :: Int
-}
+} deriving (Show, Generic)
 
-data Comment = Comment{
+instance ToJSON Favorites
+instance FromJSON Favorites
+
+data Comments = Comments{
     id_comment :: Int,
     id_user_com :: Int,
     id_post_com :: Int,
     txt_comment :: String
-}
+} deriving (Show, Generic)
 
-data Like = Like{
+instance ToJSON Comments
+instance FromJSON Comments
+
+data Likes = Likes{
     id_like :: Int,
     id_user_like :: Int,
     id_post_like :: Int
-}
+} deriving (Show, Generic)
+
+instance ToJSON Likes
+instance FromJSON Likes
