@@ -2,9 +2,13 @@
 FROM haskell:9.6 AS builder
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y curl gnupg lsb-release && \
-    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+# haskell:9.6 usa Debian Bullseye que tem libpq 13; postgresql-libpq-configure
+# requer >= 14.12, então adicionamos o repositório PGDG para obter libpq 16.
+RUN apt-get update && apt-get install -y curl gnupg2 && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg && \
+    . /etc/os-release && \
+    echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
       > /etc/apt/sources.list.d/pgdg.list && \
     apt-get update && apt-get install -y libpq-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -18,9 +22,11 @@ RUN cabal build && \
 
 # ── Etapa 2: imagem final mínima ──────────────────────────────────────────────
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y curl gnupg lsb-release && \
-    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+RUN apt-get update && apt-get install -y curl gnupg2 && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg && \
+    . /etc/os-release && \
+    echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
       > /etc/apt/sources.list.d/pgdg.list && \
     apt-get update && apt-get install -y libpq5 ca-certificates && \
     rm -rf /var/lib/apt/lists/*
