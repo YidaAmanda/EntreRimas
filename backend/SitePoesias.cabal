@@ -30,6 +30,8 @@ executable SitePoesias
                       servant-server,
                       wai-cors,
                       wai,
-                      postgresql-simple
+                      postgresql-simple,
+                      bytestring,
+                      mtl
     hs-source-dirs:   app
     default-language: Haskell2010

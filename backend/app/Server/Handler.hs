@@ -3,133 +3,153 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Handler where 
+module Server.Handler where
 
+import Control.Monad.Error.Class (throwError)
+import Control.Monad.IO.Class (liftIO)
 import Data.Proxy
 import Network.Wai
-import Servant.API  
+import Servant.API
 import Servant.Server
+import Database.PostgreSQL.Simple (Connection)
 import Types.Models
+import Database.Queries
 
-type API = 
-     "hello" :> Get '[PlainText] String
-     :<|> "users" :> Get '[JSON] [Users]
-     :<|> "users" :> Capture "id" Int :> Get '[JSON] Users
-     :<|> "users" :> ReqBody '[JSON] Users :> Post '[JSON] Users
-     :<|> "users" :> Capture "id" Int :> ReqBody '[JSON] Users :> Put '[JSON] Users
-     :<|> "posts" :> Get '[JSON] [Posts]
-     :<|> "users" :> Capture "id" Int :> "posts" :> Get '[JSON] [Posts]
-     :<|> "posts" :> Capture "id" Int :> Get '[JSON] Posts
-     :<|> "posts" :> ReqBody '[JSON] Posts :> Post '[JSON] Posts
-     :<|> "posts" :> Capture "id" Int :> ReqBody '[JSON] Posts :> Put '[JSON] Posts
-     :<|> "posts" :> Capture "id" Int :> DeleteNoContent
-     :<|> "comments" :> "post" :> Capture "postId" Int :> Get '[JSON] [Comments]
-     :<|> "comments" :> ReqBody '[JSON] Comments :> Post '[JSON] Comments
-     :<|> "comments" :> Capture "id" Int :> ReqBody '[JSON] Comments :> Put '[JSON] Comments
-     :<|> "likes" :> ReqBody '[JSON] Likes :> Post '[JSON] Likes
-     :<|> "likes" :> Capture "id" Int :> ReqBody '[JSON] Likes :> Put '[JSON] Likes
-     :<|> "likes" :> Capture "id" Int :> DeleteNoContent
-     :<|> "favorites" :> ReqBody '[JSON] Favorites :> Post '[JSON] Favorites
-     :<|> "favorites" :> Capture "id" Int :> ReqBody '[JSON] Favorites :> Put '[JSON] Favorites
-     :<|> "favorites" :> Capture "id" Int :> DeleteNoContent
-     :<|> "follows" :> ReqBody '[JSON] Follows :> Post '[JSON] Follows
-     :<|> "follows" :> Capture "id" Int :> ReqBody '[JSON] Follows :> Put '[JSON] Follows
-     :<|> "follows" :> Capture "id" Int :> DeleteNoContent
+type API =
+       "hello" :> Get '[PlainText] String
+  :<|> "users" :> Get '[JSON] [Users]
+  :<|> "users" :> Capture "id" Int :> Get '[JSON] Users
+  :<|> "users" :> ReqBody '[JSON] Users :> Post '[JSON] Users
+  :<|> "users" :> Capture "id" Int :> ReqBody '[JSON] Users :> Put '[JSON] Users
+  :<|> "posts" :> Get '[JSON] [Posts]
+  :<|> "users" :> Capture "id" Int :> "posts" :> Get '[JSON] [Posts]
+  :<|> "posts" :> Capture "id" Int :> Get '[JSON] Posts
+  :<|> "posts" :> ReqBody '[JSON] Posts :> Post '[JSON] Posts
+  :<|> "posts" :> Capture "id" Int :> ReqBody '[JSON] Posts :> Put '[JSON] Posts
+  :<|> "posts" :> Capture "id" Int :> DeleteNoContent
+  :<|> "comments" :> "post" :> Capture "postId" Int :> Get '[JSON] [Comments]
+  :<|> "comments" :> ReqBody '[JSON] Comments :> Post '[JSON] Comments
+  :<|> "comments" :> Capture "id" Int :> ReqBody '[JSON] Comments :> Put '[JSON] Comments
+  :<|> "likes" :> ReqBody '[JSON] Likes :> Post '[JSON] Likes
+  :<|> "likes" :> Capture "id" Int :> ReqBody '[JSON] Likes :> Put '[JSON] Likes
+  :<|> "likes" :> Capture "id" Int :> DeleteNoContent
+  :<|> "favorites" :> ReqBody '[JSON] Favorites :> Post '[JSON] Favorites
+  :<|> "favorites" :> Capture "id" Int :> ReqBody '[JSON] Favorites :> Put '[JSON] Favorites
+  :<|> "favorites" :> Capture "id" Int :> DeleteNoContent
+  :<|> "follows" :> ReqBody '[JSON] Follows :> Post '[JSON] Follows
+  :<|> "follows" :> Capture "id" Int :> ReqBody '[JSON] Follows :> Put '[JSON] Follows
+  :<|> "follows" :> Capture "id" Int :> DeleteNoContent
 
 handlerHello :: Handler String
 handlerHello = pure "Ola, mundo!"
 
-handlerUsers :: Handler [Users]
-handlerUsers = pure []
+handlerUsers :: Connection -> Handler [Users]
+handlerUsers conn = liftIO (getAllUsers conn)
 
-handlerUserById :: Int -> Handler Users
-handlerUserById userId = pure (Users userId "Usuario exemplo" "senha-exemplo")
+handlerUserById :: Connection -> Int -> Handler Users
+handlerUserById conn uid = do
+  mUser <- liftIO (getUserById conn uid)
+  maybe (throwError err404) pure mUser
 
-handlerCreateUser :: Users -> Handler Users
-handlerCreateUser user = pure user
+handlerCreateUser :: Connection -> Users -> Handler Users
+handlerCreateUser conn user = liftIO (createUser conn user)
 
-handlerUpdateUser :: Int -> Users -> Handler Users
-handlerUpdateUser userId user = pure user { id_user = userId }
+handlerUpdateUser :: Connection -> Int -> Users -> Handler Users
+handlerUpdateUser conn uid user = do
+  mUser <- liftIO (updateUser conn uid user)
+  maybe (throwError err404) pure mUser
 
-handlerPosts :: Handler [Posts]
-handlerPosts = pure []
+handlerPosts :: Connection -> Handler [Posts]
+handlerPosts conn = liftIO (getAllPosts conn)
 
-handlerPostsByUser :: Int -> Handler [Posts]
-handlerPostsByUser _userId = pure []
+handlerPostsByUser :: Connection -> Int -> Handler [Posts]
+handlerPostsByUser conn uid = liftIO (getPostsByUser conn uid)
 
-handlerPostById :: Int -> Handler Posts
-handlerPostById postId = pure (Posts postId 1 "Texto exemplo" "Titulo exemplo" "S")
+handlerPostById :: Connection -> Int -> Handler Posts
+handlerPostById conn pid = do
+  mPost <- liftIO (getPostById conn pid)
+  maybe (throwError err404) pure mPost
 
-handlerCreatePost :: Posts -> Handler Posts
-handlerCreatePost post = pure post
+handlerCreatePost :: Connection -> Posts -> Handler Posts
+handlerCreatePost conn post = liftIO (createPost conn post)
 
-handlerUpdatePost :: Int -> Posts -> Handler Posts
-handlerUpdatePost postId post = pure post { id_post = postId }
+handlerUpdatePost :: Connection -> Int -> Posts -> Handler Posts
+handlerUpdatePost conn pid post = do
+  mPost <- liftIO (updatePost conn pid post)
+  maybe (throwError err404) pure mPost
 
-handlerDeletePost :: Int -> Handler NoContent
-handlerDeletePost _postId = pure NoContent
+handlerDeletePost :: Connection -> Int -> Handler NoContent
+handlerDeletePost conn pid = liftIO (deletePost conn pid) >> pure NoContent
 
-handlerCommentsByPost :: Int -> Handler [Comments]
-handlerCommentsByPost _postId = pure []
+handlerCommentsByPost :: Connection -> Int -> Handler [Comments]
+handlerCommentsByPost conn pid = liftIO (getCommentsByPost conn pid)
 
-handlerCreateComment :: Comments -> Handler Comments
-handlerCreateComment comment = pure comment
+handlerCreateComment :: Connection -> Comments -> Handler Comments
+handlerCreateComment conn comment = liftIO (createComment conn comment)
 
-handlerUpdateComment :: Int -> Comments -> Handler Comments
-handlerUpdateComment commentId comment = pure comment { id_comment = commentId }
+handlerUpdateComment :: Connection -> Int -> Comments -> Handler Comments
+handlerUpdateComment conn cid comment = do
+  mComment <- liftIO (updateComment conn cid comment)
+  maybe (throwError err404) pure mComment
 
-handlerCreateLike :: Likes -> Handler Likes
-handlerCreateLike like = pure like
+handlerCreateLike :: Connection -> Likes -> Handler Likes
+handlerCreateLike conn like = liftIO (createLike conn like)
 
-handlerUpdateLike :: Int -> Likes -> Handler Likes
-handlerUpdateLike likeId like = pure like { id_like = likeId }
+handlerUpdateLike :: Connection -> Int -> Likes -> Handler Likes
+handlerUpdateLike conn lid like = do
+  mLike <- liftIO (updateLike conn lid like)
+  maybe (throwError err404) pure mLike
 
-handlerDeleteLike :: Int -> Handler NoContent
-handlerDeleteLike _likeId = pure NoContent
+handlerDeleteLike :: Connection -> Int -> Handler NoContent
+handlerDeleteLike conn lid = liftIO (deleteLike conn lid) >> pure NoContent
 
-handlerCreateFavorite :: Favorites -> Handler Favorites
-handlerCreateFavorite favorite = pure favorite
+handlerCreateFavorite :: Connection -> Favorites -> Handler Favorites
+handlerCreateFavorite conn fav = liftIO (createFavorite conn fav)
 
-handlerUpdateFavorite :: Int -> Favorites -> Handler Favorites
-handlerUpdateFavorite favoriteId favorite = pure favorite { id_favorite = favoriteId }
+handlerUpdateFavorite :: Connection -> Int -> Favorites -> Handler Favorites
+handlerUpdateFavorite conn fid fav = do
+  mFav <- liftIO (updateFavorite conn fid fav)
+  maybe (throwError err404) pure mFav
 
-handlerDeleteFavorite :: Int -> Handler NoContent
-handlerDeleteFavorite _favoriteId = pure NoContent
+handlerDeleteFavorite :: Connection -> Int -> Handler NoContent
+handlerDeleteFavorite conn fid = liftIO (deleteFavorite conn fid) >> pure NoContent
 
-handlerCreateFollow :: Follows -> Handler Follows
-handlerCreateFollow follow = pure follow
+handlerCreateFollow :: Connection -> Follows -> Handler Follows
+handlerCreateFollow conn follow = liftIO (createFollow conn follow)
 
-handlerUpdateFollow :: Int -> Follows -> Handler Follows
-handlerUpdateFollow followId follow = pure follow { id_follow = followId }
+handlerUpdateFollow :: Connection -> Int -> Follows -> Handler Follows
+handlerUpdateFollow conn fid follow = do
+  mFollow <- liftIO (updateFollow conn fid follow)
+  maybe (throwError err404) pure mFollow
 
-handlerDeleteFollow :: Int -> Handler NoContent
-handlerDeleteFollow _followId = pure NoContent
+handlerDeleteFollow :: Connection -> Int -> Handler NoContent
+handlerDeleteFollow conn fid = liftIO (deleteFollow conn fid) >> pure NoContent
 
-server :: Server API
-server =
+server :: Connection -> Server API
+server conn =
        handlerHello
-  :<|> handlerUsers
-  :<|> handlerUserById
-  :<|> handlerCreateUser
-  :<|> handlerUpdateUser
-  :<|> handlerPosts
-  :<|> handlerPostsByUser
-  :<|> handlerPostById
-  :<|> handlerCreatePost
-  :<|> handlerUpdatePost
-  :<|> handlerDeletePost
-  :<|> handlerCommentsByPost
-  :<|> handlerCreateComment
-  :<|> handlerUpdateComment
-  :<|> handlerCreateLike
-  :<|> handlerUpdateLike
-  :<|> handlerDeleteLike
-  :<|> handlerCreateFavorite
-  :<|> handlerUpdateFavorite
-  :<|> handlerDeleteFavorite
-  :<|> handlerCreateFollow
-  :<|> handlerUpdateFollow
-  :<|> handlerDeleteFollow
+  :<|> handlerUsers conn
+  :<|> handlerUserById conn
+  :<|> handlerCreateUser conn
+  :<|> handlerUpdateUser conn
+  :<|> handlerPosts conn
+  :<|> handlerPostsByUser conn
+  :<|> handlerPostById conn
+  :<|> handlerCreatePost conn
+  :<|> handlerUpdatePost conn
+  :<|> handlerDeletePost conn
+  :<|> handlerCommentsByPost conn
+  :<|> handlerCreateComment conn
+  :<|> handlerUpdateComment conn
+  :<|> handlerCreateLike conn
+  :<|> handlerUpdateLike conn
+  :<|> handlerDeleteLike conn
+  :<|> handlerCreateFavorite conn
+  :<|> handlerUpdateFavorite conn
+  :<|> handlerDeleteFavorite conn
+  :<|> handlerCreateFollow conn
+  :<|> handlerUpdateFollow conn
+  :<|> handlerDeleteFollow conn
 
-app :: Application
-app = serve (Proxy @API) server
+app :: Connection -> Application
+app conn = serve (Proxy @API) (server conn)
