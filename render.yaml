@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: entre-rimas
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: entre-rimas-db
+          property: connectionString
+
+databases:
+  - name: entre-rimas-db
+    databaseName: entrerimas
+    user: entrerimas
+    plan: free

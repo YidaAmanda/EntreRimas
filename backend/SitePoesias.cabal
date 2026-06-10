@@ -1,17 +1,13 @@
 cabal-version:      3.14
 name:               SitePoesias
 version:            0.1.0.0
--- synopsis:
--- description:
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             JoaoPAmanda
 maintainer:         yida.amanda@gmail.com
--- copyright:
 category:           Web
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
--- extra-source-files:
 
 common warnings
     ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
@@ -22,7 +18,6 @@ executable SitePoesias
     other-modules:    Server.Handler
                       Types.Models
                       Database.Queries
-    -- other-extensions:
     build-depends:    base,
                       servant,
                       aeson,
@@ -30,6 +25,7 @@ executable SitePoesias
                       servant-server,
                       wai-cors,
                       wai,
+                      wai-app-static,
                       postgresql-simple,
                       bytestring,
                       mtl

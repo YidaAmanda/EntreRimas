@@ -15,57 +15,55 @@ connectDB = do
   _ <- execute_ conn "SET search_path TO poesias"
   pure conn
 
--- Users
-
 getAllUsers :: Connection -> IO [Users]
 getAllUsers conn = query_ conn
-  "SELECT id_user, nome, senha FROM users"
+  "SELECT id_user, nome, senha, bio, city, accent, TO_CHAR(created_at, 'YYYY-MM-DD') FROM users"
 
 getUserById :: Connection -> Int -> IO (Maybe Users)
 getUserById conn uid = listToMaybe <$>
-  query conn "SELECT id_user, nome, senha FROM users WHERE id_user = ?" (Only uid)
+  query conn
+    "SELECT id_user, nome, senha, bio, city, accent, TO_CHAR(created_at, 'YYYY-MM-DD') FROM users WHERE id_user = ?"
+    (Only uid)
 
 createUser :: Connection -> Users -> IO Users
 createUser conn user = do
   rows <- query conn
-    "INSERT INTO users (nome, senha) VALUES (?, ?) RETURNING id_user, nome, senha"
-    (nome user, senha user)
+    "INSERT INTO users (nome, senha, bio, city, accent) VALUES (?, ?, ?, ?, ?) RETURNING id_user, nome, senha, bio, city, accent, TO_CHAR(created_at, 'YYYY-MM-DD')"
+    (nome user, senha user, bio user, city user, accent user)
   pure (head rows)
 
 updateUser :: Connection -> Int -> Users -> IO (Maybe Users)
 updateUser conn uid user = listToMaybe <$>
   query conn
-    "UPDATE users SET nome = ?, senha = ? WHERE id_user = ? RETURNING id_user, nome, senha"
-    (nome user, senha user, uid)
-
--- Posts
+    "UPDATE users SET nome = ?, senha = ?, bio = ?, city = ?, accent = ? WHERE id_user = ? RETURNING id_user, nome, senha, bio, city, accent, TO_CHAR(created_at, 'YYYY-MM-DD')"
+    (nome user, senha user, bio user, city user, accent user, uid)
 
 getAllPosts :: Connection -> IO [Posts]
 getAllPosts conn = query_ conn
-  "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment FROM posts"
+  "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD') FROM posts"
 
 getPostsByUser :: Connection -> Int -> IO [Posts]
 getPostsByUser conn uid = query conn
-  "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment FROM posts WHERE id_user_post = ?"
+  "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD') FROM posts WHERE id_user_post = ?"
   (Only uid)
 
 getPostById :: Connection -> Int -> IO (Maybe Posts)
 getPostById conn pid = listToMaybe <$>
   query conn
-    "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment FROM posts WHERE id_post = ?"
+    "SELECT id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD') FROM posts WHERE id_post = ?"
     (Only pid)
 
 createPost :: Connection -> Posts -> IO Posts
 createPost conn post = do
   rows <- query conn
-    "INSERT INTO posts (id_user_post, txt_post, txt_title, ic_comment) VALUES (?, ?, ?, ?) RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment"
+    "INSERT INTO posts (id_user_post, txt_post, txt_title, ic_comment) VALUES (?, ?, ?, ?) RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
     (id_user_post post, txt_post post, txt_title post, ic_comment post)
   pure (head rows)
 
 updatePost :: Connection -> Int -> Posts -> IO (Maybe Posts)
 updatePost conn pid post = listToMaybe <$>
   query conn
-    "UPDATE posts SET id_user_post = ?, txt_post = ?, txt_title = ?, ic_comment = ? WHERE id_post = ? RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment"
+    "UPDATE posts SET id_user_post = ?, txt_post = ?, txt_title = ?, ic_comment = ? WHERE id_post = ? RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
     (id_user_post post, txt_post post, txt_title post, ic_comment post, pid)
 
 deletePost :: Connection -> Int -> IO ()
@@ -73,27 +71,23 @@ deletePost conn pid = do
   _ <- execute conn "DELETE FROM posts WHERE id_post = ?" (Only pid)
   pure ()
 
--- Comments
-
 getCommentsByPost :: Connection -> Int -> IO [Comments]
 getCommentsByPost conn pid = query conn
-  "SELECT id_comment, id_user_com, id_post_com, txt_comment FROM comments WHERE id_post_com = ?"
+  "SELECT id_comment, id_user_com, id_post_com, txt_comment, TO_CHAR(created_at, 'YYYY-MM-DD') FROM comments WHERE id_post_com = ?"
   (Only pid)
 
 createComment :: Connection -> Comments -> IO Comments
 createComment conn comment = do
   rows <- query conn
-    "INSERT INTO comments (id_user_com, id_post_com, txt_comment) VALUES (?, ?, ?) RETURNING id_comment, id_user_com, id_post_com, txt_comment"
+    "INSERT INTO comments (id_user_com, id_post_com, txt_comment) VALUES (?, ?, ?) RETURNING id_comment, id_user_com, id_post_com, txt_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
     (id_user_com comment, id_post_com comment, txt_comment comment)
   pure (head rows)
 
 updateComment :: Connection -> Int -> Comments -> IO (Maybe Comments)
 updateComment conn cid comment = listToMaybe <$>
   query conn
-    "UPDATE comments SET id_user_com = ?, id_post_com = ?, txt_comment = ? WHERE id_comment = ? RETURNING id_comment, id_user_com, id_post_com, txt_comment"
+    "UPDATE comments SET id_user_com = ?, id_post_com = ?, txt_comment = ? WHERE id_comment = ? RETURNING id_comment, id_user_com, id_post_com, txt_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
     (id_user_com comment, id_post_com comment, txt_comment comment, cid)
-
--- Likes
 
 createLike :: Connection -> Likes -> IO Likes
 createLike conn like = do
@@ -113,8 +107,6 @@ deleteLike conn lid = do
   _ <- execute conn "DELETE FROM likes WHERE id_like = ?" (Only lid)
   pure ()
 
--- Favorites
-
 createFavorite :: Connection -> Favorites -> IO Favorites
 createFavorite conn fav = do
   rows <- query conn
@@ -132,8 +124,6 @@ deleteFavorite :: Connection -> Int -> IO ()
 deleteFavorite conn fid = do
   _ <- execute conn "DELETE FROM favorites WHERE id_favorite = ?" (Only fid)
   pure ()
-
--- Follows
 
 createFollow :: Connection -> Follows -> IO Follows
 createFollow conn follow = do

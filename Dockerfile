@@ -1,9 +1,6 @@
-# ── Etapa 1: compilação ───────────────────────────────────────────────────────
 FROM haskell:9.6 AS builder
 WORKDIR /build
 
-# haskell:9.6 usa Debian Bullseye que tem libpq 13; postgresql-libpq-configure
-# requer >= 14.12, então adicionamos o repositório PGDG para obter libpq 16.
 RUN apt-get update && apt-get install -y ca-certificates curl gnupg2 && \
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
       | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg && \
@@ -20,7 +17,6 @@ COPY backend/ .
 RUN cabal build && \
     cp $(cabal list-bin SitePoesias) /build/SitePoesias
 
-# ── Etapa 2: imagem final mínima ──────────────────────────────────────────────
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl gnupg2 && \
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
@@ -33,6 +29,7 @@ RUN apt-get update && apt-get install -y ca-certificates curl gnupg2 && \
 
 WORKDIR /app
 COPY --from=builder /build/SitePoesias .
+COPY frontend/ ./frontend/
 
 EXPOSE 8080
 CMD ["./SitePoesias"]

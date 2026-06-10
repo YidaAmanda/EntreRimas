@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Entre-Rimas — poesia compartilhada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --mono: "Spline Sans Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --maxw: 1200px;
+  --read: 620px;
+  --radius: 4px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --density: 1;
+  --type-scale: 1;
+}
+
+:root[data-theme="light"] {
+  --bg:        oklch(0.972 0.008 84);
+  --bg-2:      oklch(0.948 0.010 82);
+  --surface:   oklch(0.992 0.005 84);
+  --ink:       oklch(0.245 0.012 60);
+  --ink-soft:  oklch(0.430 0.012 62);
+  --ink-faint: oklch(0.620 0.010 66);
+  --rule:      oklch(0.880 0.010 78);
+  --rule-soft: oklch(0.920 0.008 80);
+  --accent:    oklch(0.585 0.110 46);
+  --accent-ink: oklch(0.430 0.110 44);
+  --accent-wash: oklch(0.585 0.110 46 / 0.10);
+  --shadow: 0 1px 2px oklch(0.40 0.02 60 / 0.05), 0 12px 30px -14px oklch(0.40 0.02 60 / 0.18);
+}
+
+:root[data-theme="dark"] {
+  --bg:        oklch(0.205 0.012 62);
+  --bg-2:      oklch(0.245 0.012 62);
+  --surface:   oklch(0.258 0.012 62);
+  --ink:       oklch(0.922 0.012 82);
+  --ink-soft:  oklch(0.730 0.012 78);
+  --ink-faint: oklch(0.585 0.010 72);
+  --rule:      oklch(0.345 0.012 64);
+  --rule-soft: oklch(0.300 0.012 64);
+  --accent:    oklch(0.715 0.105 56);
+  --accent-ink: oklch(0.800 0.090 62);
+  --accent-wash: oklch(0.715 0.105 56 / 0.14);
+  --shadow: 0 1px 2px oklch(0 0 0 / 0.25), 0 18px 40px -18px oklch(0 0 0 / 0.55);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: calc(18px * var(--type-scale));
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
+  transition: background 0.4s var(--ease), color 0.4s var(--ease);
+}
+
+::selection { background: var(--accent-wash); }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+
+.rule { height: 1px; background: var(--rule); border: 0; width: 100%; }
+.rule-soft { height: 1px; background: var(--rule-soft); border: 0; width: 100%; }
+
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.6em * var(--type-scale) - 1px),
+    var(--rule-soft) calc(1.6em * var(--type-scale) - 1px),
+    var(--rule-soft) calc(1.6em * var(--type-scale))
+  );
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+@keyframes riseIn {
+  from { transform: translateY(9px); }
+  to   { transform: translateY(0); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view-enter > * { animation: riseIn 0.5s var(--ease); }
+  .spinning { animation: spin 1s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+#root { min-height: 100vh; }
+* { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
