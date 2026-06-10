@@ -3,7 +3,7 @@
 module Main where
 
 import qualified Data.ByteString as BS
-import Network.Wai (Application, rawPathInfo)
+import Network.Wai (Application, pathInfo, rawPathInfo)
 import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors
@@ -24,8 +24,14 @@ apiPrefixes = ["/hello", "/users", "/posts", "/comments", "/likes", "/favorites"
 
 withStatic :: Application -> Application
 withStatic apiApp req respond
+  | rawPathInfo req == "/" = staticFiles req
+      { rawPathInfo = "/index.html"
+      , pathInfo = ["index.html"]
+      } respond
   | any (`BS.isPrefixOf` rawPathInfo req) apiPrefixes = apiApp req respond
-  | otherwise = staticApp (defaultWebAppSettings "frontend") req respond
+  | otherwise = staticFiles req respond
+  where
+    staticFiles = staticApp (defaultWebAppSettings "frontend")
 
 main :: IO ()
 main = do

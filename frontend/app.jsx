@@ -35,14 +35,17 @@ const api = {
     create: c   => apiFetch("/comments", { method: "POST", body: JSON.stringify(c) }),
   },
   likes: {
+    getAll: ()  => apiFetch("/likes"),
     create: l  => apiFetch("/likes",      { method: "POST",   body: JSON.stringify(l) }),
     delete: id => apiFetch(`/likes/${id}`, { method: "DELETE" }),
   },
   favorites: {
+    getAll: ()  => apiFetch("/favorites"),
     create: f  => apiFetch("/favorites",       { method: "POST",   body: JSON.stringify(f) }),
     delete: id => apiFetch(`/favorites/${id}`, { method: "DELETE" }),
   },
   follows: {
+    getAll: ()  => apiFetch("/follows"),
     create: f  => apiFetch("/follows",       { method: "POST",   body: JSON.stringify(f) }),
     delete: id => apiFetch(`/follows/${id}`, { method: "DELETE" }),
   },
@@ -90,10 +93,23 @@ function adaptComment(c) {
   };
 }
 
+function relationMap(rows, ownerKey, targetKey, idKey) {
+  return (rows || []).reduce((acc, row) => {
+    const owner = Number(row[ownerKey]);
+    const target = Number(row[targetKey]);
+    const id = Number(row[idKey]);
+    if (!Number.isFinite(owner) || !Number.isFinite(target) || !Number.isFinite(id)) return acc;
+    const ownerMap = acc[owner] || (acc[owner] = {});
+    ownerMap[target] = id;
+    return acc;
+  }, {});
+}
+
 
 const likeStore = {
   data: ls.get("sp_likes", {}),
   subs: new Set(),
+  setAll(data) { this.data = data || {}; ls.set("sp_likes", this.data); this.notify(); },
   has(pid, uid)  { return !!uid && pid in (this.data[uid] || {}); },
   count(pid)     { return Object.values(this.data).filter(m => pid in m).length; },
   async toggle(pid, uid) {
@@ -102,13 +118,23 @@ const likeStore = {
     if (pid in m) {
       const id = m[pid]; delete m[pid];
       ls.set("sp_likes", this.data); this.notify();
-      if (id > 0) api.likes.delete(id).catch(() => {});
+      if (id > 0) {
+        try {
+          await api.likes.delete(id);
+        } catch (e) {
+          m[pid] = id; ls.set("sp_likes", this.data); this.notify();
+          console.error("like delete failed:", e);
+        }
+      }
     } else {
       m[pid] = -1; ls.set("sp_likes", this.data); this.notify();
       try {
         const r = await api.likes.create({ id_like: 0, id_user_like: uid, id_post_like: pid });
-        m[pid] = r.id_like; ls.set("sp_likes", this.data);
-      } catch {}
+        m[pid] = r.id_like; ls.set("sp_likes", this.data); this.notify();
+      } catch (e) {
+        delete m[pid]; ls.set("sp_likes", this.data); this.notify();
+        console.error("like create failed:", e);
+      }
     }
   },
   notify() { this.subs.forEach(fn => fn()); },
@@ -118,6 +144,7 @@ const likeStore = {
 const favStore = {
   data: ls.get("sp_favs", {}),
   subs: new Set(),
+  setAll(data) { this.data = data || {}; ls.set("sp_favs", this.data); this.notify(); },
   has(pid, uid)   { return !!uid && pid in (this.data[uid] || {}); },
   userFavs(uid)   { return Object.keys(this.data[uid] || {}).map(Number); },
   async toggle(pid, uid) {
@@ -126,13 +153,23 @@ const favStore = {
     if (pid in m) {
       const id = m[pid]; delete m[pid];
       ls.set("sp_favs", this.data); this.notify();
-      if (id > 0) api.favorites.delete(id).catch(() => {});
+      if (id > 0) {
+        try {
+          await api.favorites.delete(id);
+        } catch (e) {
+          m[pid] = id; ls.set("sp_favs", this.data); this.notify();
+          console.error("favorite delete failed:", e);
+        }
+      }
     } else {
       m[pid] = -1; ls.set("sp_favs", this.data); this.notify();
       try {
         const r = await api.favorites.create({ id_favorite: 0, id_user_fav: uid, id_post_fav: pid });
-        m[pid] = r.id_favorite; ls.set("sp_favs", this.data);
-      } catch {}
+        m[pid] = r.id_favorite; ls.set("sp_favs", this.data); this.notify();
+      } catch (e) {
+        delete m[pid]; ls.set("sp_favs", this.data); this.notify();
+        console.error("favorite create failed:", e);
+      }
     }
   },
   notify() { this.subs.forEach(fn => fn()); },
@@ -142,6 +179,7 @@ const favStore = {
 const followStore = {
   data: ls.get("sp_follows", {}),
   subs: new Set(),
+  setAll(data) { this.data = data || {}; ls.set("sp_follows", this.data); this.notify(); },
   isFollowing(ferId, fedId) { return !!ferId && fedId in (this.data[ferId] || {}); },
   followerCount(uid)  { return Object.values(this.data).filter(m => uid in m).length; },
   followingCount(uid) { return Object.keys(this.data[uid] || {}).length; },
@@ -151,13 +189,23 @@ const followStore = {
     if (fedId in m) {
       const id = m[fedId]; delete m[fedId];
       ls.set("sp_follows", this.data); this.notify();
-      if (id > 0) api.follows.delete(id).catch(() => {});
+      if (id > 0) {
+        try {
+          await api.follows.delete(id);
+        } catch (e) {
+          m[fedId] = id; ls.set("sp_follows", this.data); this.notify();
+          console.error("follow delete failed:", e);
+        }
+      }
     } else {
       m[fedId] = -1; ls.set("sp_follows", this.data); this.notify();
       try {
         const r = await api.follows.create({ id_follow: 0, id_seguidor: ferId, id_seguido: fedId });
-        m[fedId] = r.id_follow; ls.set("sp_follows", this.data);
-      } catch {}
+        m[fedId] = r.id_follow; ls.set("sp_follows", this.data); this.notify();
+      } catch (e) {
+        delete m[fedId]; ls.set("sp_follows", this.data); this.notify();
+        console.error("follow create failed:", e);
+      }
     }
   },
   notify() { this.subs.forEach(fn => fn()); },
@@ -1459,9 +1507,18 @@ function App() {
   const loadData = useCallback(async () => {
     setAppState(prev => ({ ...prev, loading: true }));
     try {
-      const [rawUsers, rawPosts] = await Promise.all([api.users.getAll(), api.posts.getAll()]);
+      const [rawUsers, rawPosts, rawLikes, rawFavorites, rawFollows] = await Promise.all([
+        api.users.getAll(),
+        api.posts.getAll(),
+        api.likes.getAll(),
+        api.favorites.getAll(),
+        api.follows.getAll(),
+      ]);
       const users = rawUsers.map(adaptUser);
       const posts = rawPosts.map(adaptPost).sort((a, b) => b.id - a.id);
+      likeStore.setAll(relationMap(rawLikes, "id_user_like", "id_post_like", "id_like"));
+      favStore.setAll(relationMap(rawFavorites, "id_user_fav", "id_post_fav", "id_favorite"));
+      followStore.setAll(relationMap(rawFollows, "id_seguidor", "id_seguido", "id_follow"));
       setAppState({ users, posts, loading: false, apiOk: true });
     } catch {
       setAppState(prev => ({ ...prev, loading: false, apiOk: false }));

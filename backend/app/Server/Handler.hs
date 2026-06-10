@@ -30,12 +30,15 @@ type API =
   :<|> "comments" :> "post" :> Capture "postId" Int :> Get '[JSON] [Comments]
   :<|> "comments" :> ReqBody '[JSON] Comments :> Post '[JSON] Comments
   :<|> "comments" :> Capture "id" Int :> ReqBody '[JSON] Comments :> Put '[JSON] Comments
+  :<|> "likes" :> Get '[JSON] [Likes]
   :<|> "likes" :> ReqBody '[JSON] Likes :> Post '[JSON] Likes
   :<|> "likes" :> Capture "id" Int :> ReqBody '[JSON] Likes :> Put '[JSON] Likes
   :<|> "likes" :> Capture "id" Int :> DeleteNoContent
+  :<|> "favorites" :> Get '[JSON] [Favorites]
   :<|> "favorites" :> ReqBody '[JSON] Favorites :> Post '[JSON] Favorites
   :<|> "favorites" :> Capture "id" Int :> ReqBody '[JSON] Favorites :> Put '[JSON] Favorites
   :<|> "favorites" :> Capture "id" Int :> DeleteNoContent
+  :<|> "follows" :> Get '[JSON] [Follows]
   :<|> "follows" :> ReqBody '[JSON] Follows :> Post '[JSON] Follows
   :<|> "follows" :> Capture "id" Int :> ReqBody '[JSON] Follows :> Put '[JSON] Follows
   :<|> "follows" :> Capture "id" Int :> DeleteNoContent
@@ -92,6 +95,9 @@ handlerUpdateComment conn cid comment = do
   mComment <- liftIO (updateComment conn cid comment)
   maybe (throwError err404) pure mComment
 
+handlerLikes :: Connection -> Handler [Likes]
+handlerLikes conn = liftIO (getAllLikes conn)
+
 handlerCreateLike :: Connection -> Likes -> Handler Likes
 handlerCreateLike conn like = liftIO (createLike conn like)
 
@@ -103,6 +109,9 @@ handlerUpdateLike conn lid like = do
 handlerDeleteLike :: Connection -> Int -> Handler NoContent
 handlerDeleteLike conn lid = liftIO (deleteLike conn lid) >> pure NoContent
 
+handlerFavorites :: Connection -> Handler [Favorites]
+handlerFavorites conn = liftIO (getAllFavorites conn)
+
 handlerCreateFavorite :: Connection -> Favorites -> Handler Favorites
 handlerCreateFavorite conn fav = liftIO (createFavorite conn fav)
 
@@ -113,6 +122,9 @@ handlerUpdateFavorite conn fid fav = do
 
 handlerDeleteFavorite :: Connection -> Int -> Handler NoContent
 handlerDeleteFavorite conn fid = liftIO (deleteFavorite conn fid) >> pure NoContent
+
+handlerFollows :: Connection -> Handler [Follows]
+handlerFollows conn = liftIO (getAllFollows conn)
 
 handlerCreateFollow :: Connection -> Follows -> Handler Follows
 handlerCreateFollow conn follow = liftIO (createFollow conn follow)
@@ -141,12 +153,15 @@ server conn =
   :<|> handlerCommentsByPost conn
   :<|> handlerCreateComment conn
   :<|> handlerUpdateComment conn
+  :<|> handlerLikes conn
   :<|> handlerCreateLike conn
   :<|> handlerUpdateLike conn
   :<|> handlerDeleteLike conn
+  :<|> handlerFavorites conn
   :<|> handlerCreateFavorite conn
   :<|> handlerUpdateFavorite conn
   :<|> handlerDeleteFavorite conn
+  :<|> handlerFollows conn
   :<|> handlerCreateFollow conn
   :<|> handlerUpdateFollow conn
   :<|> handlerDeleteFollow conn

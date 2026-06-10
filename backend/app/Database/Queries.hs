@@ -89,12 +89,22 @@ updateComment conn cid comment = listToMaybe <$>
     "UPDATE comments SET id_user_com = ?, id_post_com = ?, txt_comment = ? WHERE id_comment = ? RETURNING id_comment, id_user_com, id_post_com, txt_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
     (id_user_com comment, id_post_com comment, txt_comment comment, cid)
 
+getAllLikes :: Connection -> IO [Likes]
+getAllLikes conn = query_ conn
+  "SELECT id_like, id_user_like, id_post_like FROM likes"
+
 createLike :: Connection -> Likes -> IO Likes
 createLike conn like = do
-  rows <- query conn
-    "INSERT INTO likes (id_user_like, id_post_like) VALUES (?, ?) RETURNING id_like, id_user_like, id_post_like"
+  existing <- query conn
+    "SELECT id_like, id_user_like, id_post_like FROM likes WHERE id_user_like = ? AND id_post_like = ? LIMIT 1"
     (id_user_like like, id_post_like like)
-  pure (head rows)
+  case existing of
+    row:_ -> pure row
+    [] -> do
+      rows <- query conn
+        "INSERT INTO likes (id_user_like, id_post_like) VALUES (?, ?) RETURNING id_like, id_user_like, id_post_like"
+        (id_user_like like, id_post_like like)
+      pure (head rows)
 
 updateLike :: Connection -> Int -> Likes -> IO (Maybe Likes)
 updateLike conn lid like = listToMaybe <$>
@@ -104,15 +114,27 @@ updateLike conn lid like = listToMaybe <$>
 
 deleteLike :: Connection -> Int -> IO ()
 deleteLike conn lid = do
-  _ <- execute conn "DELETE FROM likes WHERE id_like = ?" (Only lid)
+  _ <- execute conn
+    "DELETE FROM likes WHERE (id_user_like, id_post_like) IN (SELECT id_user_like, id_post_like FROM likes WHERE id_like = ?)"
+    (Only lid)
   pure ()
+
+getAllFavorites :: Connection -> IO [Favorites]
+getAllFavorites conn = query_ conn
+  "SELECT id_favorite, id_user_fav, id_post_fav FROM favorites"
 
 createFavorite :: Connection -> Favorites -> IO Favorites
 createFavorite conn fav = do
-  rows <- query conn
-    "INSERT INTO favorites (id_user_fav, id_post_fav) VALUES (?, ?) RETURNING id_favorite, id_user_fav, id_post_fav"
+  existing <- query conn
+    "SELECT id_favorite, id_user_fav, id_post_fav FROM favorites WHERE id_user_fav = ? AND id_post_fav = ? LIMIT 1"
     (id_user_fav fav, id_post_fav fav)
-  pure (head rows)
+  case existing of
+    row:_ -> pure row
+    [] -> do
+      rows <- query conn
+        "INSERT INTO favorites (id_user_fav, id_post_fav) VALUES (?, ?) RETURNING id_favorite, id_user_fav, id_post_fav"
+        (id_user_fav fav, id_post_fav fav)
+      pure (head rows)
 
 updateFavorite :: Connection -> Int -> Favorites -> IO (Maybe Favorites)
 updateFavorite conn fid fav = listToMaybe <$>
@@ -122,15 +144,27 @@ updateFavorite conn fid fav = listToMaybe <$>
 
 deleteFavorite :: Connection -> Int -> IO ()
 deleteFavorite conn fid = do
-  _ <- execute conn "DELETE FROM favorites WHERE id_favorite = ?" (Only fid)
+  _ <- execute conn
+    "DELETE FROM favorites WHERE (id_user_fav, id_post_fav) IN (SELECT id_user_fav, id_post_fav FROM favorites WHERE id_favorite = ?)"
+    (Only fid)
   pure ()
+
+getAllFollows :: Connection -> IO [Follows]
+getAllFollows conn = query_ conn
+  "SELECT id_follow, id_seguidor, id_seguido FROM follows"
 
 createFollow :: Connection -> Follows -> IO Follows
 createFollow conn follow = do
-  rows <- query conn
-    "INSERT INTO follows (id_seguidor, id_seguido) VALUES (?, ?) RETURNING id_follow, id_seguidor, id_seguido"
+  existing <- query conn
+    "SELECT id_follow, id_seguidor, id_seguido FROM follows WHERE id_seguidor = ? AND id_seguido = ? LIMIT 1"
     (id_seguidor follow, id_seguido follow)
-  pure (head rows)
+  case existing of
+    row:_ -> pure row
+    [] -> do
+      rows <- query conn
+        "INSERT INTO follows (id_seguidor, id_seguido) VALUES (?, ?) RETURNING id_follow, id_seguidor, id_seguido"
+        (id_seguidor follow, id_seguido follow)
+      pure (head rows)
 
 updateFollow :: Connection -> Int -> Follows -> IO (Maybe Follows)
 updateFollow conn fid follow = listToMaybe <$>
@@ -140,5 +174,7 @@ updateFollow conn fid follow = listToMaybe <$>
 
 deleteFollow :: Connection -> Int -> IO ()
 deleteFollow conn fid = do
-  _ <- execute conn "DELETE FROM follows WHERE id_follow = ?" (Only fid)
+  _ <- execute conn
+    "DELETE FROM follows WHERE (id_seguidor, id_seguido) IN (SELECT id_seguidor, id_seguido FROM follows WHERE id_follow = ?)"
+    (Only fid)
   pure ()
