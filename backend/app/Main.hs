@@ -4,7 +4,7 @@ module Main where
 
 import qualified Data.ByteString as BS
 import Network.Wai (Application, pathInfo, rawPathInfo)
-import Network.Wai.Application.Static (defaultWebAppSettings, staticApp)
+import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors
 import Server.Handler (app)
@@ -31,7 +31,7 @@ withStatic apiApp req respond
   | any (`BS.isPrefixOf` rawPathInfo req) apiPrefixes = apiApp req respond
   | otherwise = staticFiles req respond
   where
-    staticFiles = staticApp (defaultWebAppSettings "frontend")
+    staticFiles = staticApp (defaultFileServerSettings "frontend")
 
 main :: IO ()
 main = do
