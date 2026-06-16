@@ -67,7 +67,11 @@ updatePost conn pid post = listToMaybe <$>
     (txt_post post, txt_title post, ic_comment post, pid, id_user_post post)
 
 deletePost :: Connection -> Int -> Int -> IO ()
-deletePost conn pid uid = do
+deletePost conn pid uid = withTransaction conn $ do
+  let ownedPost = "(SELECT id_post FROM posts WHERE id_post = ? AND id_user_post = ?)"
+  _ <- execute conn ("DELETE FROM comments WHERE id_post_com IN " <> ownedPost) (pid, uid)
+  _ <- execute conn ("DELETE FROM likes WHERE id_post_like IN " <> ownedPost) (pid, uid)
+  _ <- execute conn ("DELETE FROM favorites WHERE id_post_fav IN " <> ownedPost) (pid, uid)
   _ <- execute conn "DELETE FROM posts WHERE id_post = ? AND id_user_post = ?" (pid, uid)
   pure ()
 
