@@ -63,12 +63,12 @@ createPost conn post = do
 updatePost :: Connection -> Int -> Posts -> IO (Maybe Posts)
 updatePost conn pid post = listToMaybe <$>
   query conn
-    "UPDATE posts SET id_user_post = ?, txt_post = ?, txt_title = ?, ic_comment = ? WHERE id_post = ? RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
-    (id_user_post post, txt_post post, txt_title post, ic_comment post, pid)
+    "UPDATE posts SET txt_post = ?, txt_title = ?, ic_comment = ? WHERE id_post = ? AND id_user_post = ? RETURNING id_post, id_user_post, txt_post, txt_title, ic_comment, TO_CHAR(created_at, 'YYYY-MM-DD')"
+    (txt_post post, txt_title post, ic_comment post, pid, id_user_post post)
 
-deletePost :: Connection -> Int -> IO ()
-deletePost conn pid = do
-  _ <- execute conn "DELETE FROM posts WHERE id_post = ?" (Only pid)
+deletePost :: Connection -> Int -> Int -> IO ()
+deletePost conn pid uid = do
+  _ <- execute conn "DELETE FROM posts WHERE id_post = ? AND id_user_post = ?" (pid, uid)
   pure ()
 
 getCommentsByPost :: Connection -> Int -> IO [Comments]

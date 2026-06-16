@@ -26,7 +26,7 @@ type API =
   :<|> "posts" :> Capture "id" Int :> Get '[JSON] Posts
   :<|> "posts" :> ReqBody '[JSON] Posts :> Post '[JSON] Posts
   :<|> "posts" :> Capture "id" Int :> ReqBody '[JSON] Posts :> Put '[JSON] Posts
-  :<|> "posts" :> Capture "id" Int :> DeleteNoContent
+  :<|> "posts" :> Capture "id" Int :> QueryParam "userId" Int :> DeleteNoContent
   :<|> "comments" :> "post" :> Capture "postId" Int :> Get '[JSON] [Comments]
   :<|> "comments" :> ReqBody '[JSON] Comments :> Post '[JSON] Comments
   :<|> "comments" :> Capture "id" Int :> ReqBody '[JSON] Comments :> Put '[JSON] Comments
@@ -81,8 +81,9 @@ handlerUpdatePost conn pid post = do
   mPost <- liftIO (updatePost conn pid post)
   maybe (throwError err404) pure mPost
 
-handlerDeletePost :: Connection -> Int -> Handler NoContent
-handlerDeletePost conn pid = liftIO (deletePost conn pid) >> pure NoContent
+handlerDeletePost :: Connection -> Int -> Maybe Int -> Handler NoContent
+handlerDeletePost _    _   Nothing    = throwError err403
+handlerDeletePost conn pid (Just uid) = liftIO (deletePost conn pid uid) >> pure NoContent
 
 handlerCommentsByPost :: Connection -> Int -> Handler [Comments]
 handlerCommentsByPost conn pid = liftIO (getCommentsByPost conn pid)

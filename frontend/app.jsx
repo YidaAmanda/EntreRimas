@@ -28,7 +28,7 @@ const api = {
     byUser:  uid      => apiFetch(`/users/${uid}/posts`),
     create:  p        => apiFetch("/posts",    { method: "POST", body: JSON.stringify(p) }),
     update:  (id, p)  => apiFetch(`/posts/${id}`,  { method: "PUT",  body: JSON.stringify(p) }),
-    delete:  id       => apiFetch(`/posts/${id}`,  { method: "DELETE" }),
+    delete:  (id, uid) => apiFetch(`/posts/${id}?userId=${uid}`, { method: "DELETE" }),
   },
   comments: {
     byPost: pid => apiFetch(`/comments/post/${pid}`),
@@ -382,6 +382,7 @@ function Icon({ name, size = 18, stroke = 1.6 }) {
     loader:    <><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></>,
     wifiOff:   <><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.7 16.7 12 21l-4.7-4.3M10.6 10.6a5 5 0 0 1 5.6 5.6M5.3 5.3A12 12 0 0 0 2 11M22 11a12 12 0 0 0-2.6-3M8.3 8.3a7 7 0 0 0-2 5M17.7 8.3a7 7 0 0 1 .6 5"/></>,
     refresh:   <><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.2-5.5L23 10"/></>,
+    trash:     <><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>,
   };
   return <svg {...c} aria-hidden="true">{P[name]}</svg>;
 }
@@ -618,13 +619,26 @@ function FollowButton({ authorId }) {
 
 function PoemCard({ poem, onOpen, onAuthor, featured }) {
   const { users } = useDataCtx();
+  const { user, goEdit, goDelete } = useAuthCtx() || {};
   const author = useMemo(() => users.find(u => u.id === poem.authorId) || { id: poem.authorId, nome: "Autor", name: "Autor", accent: 200 }, [users, poem.authorId]);
   const [hover, setHover] = useState(false);
+  const isOwner = user?.id === poem.authorId;
   const excerpt = poem.body.filter(l => l !== "").slice(0, featured ? 5 : 3);
+  const ownerBtnStyle = { background: "none", border: 0, cursor: "pointer", width: 28, height: 28, display: "grid", placeItems: "center", borderRadius: 4, color: "var(--ink-faint)" };
   return (
     <article style={{ ...A.card, ...(featured ? A.cardFeatured : {}), ...(hover ? A.cardHover : {}) }}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      <div style={A.cardTop}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {isOwner ? (
+          <div style={{ display: "flex", gap: 2 }}>
+            <button onClick={e => { e.stopPropagation(); goEdit && goEdit(poem); }} style={ownerBtnStyle} title="Editar poema">
+              <Icon name="edit" size={13}/>
+            </button>
+            <button onClick={e => { e.stopPropagation(); goDelete && goDelete(poem); }} style={{ ...ownerBtnStyle, color: "oklch(0.58 0.16 24 / 0.75)" }} title="Excluir poema">
+              <Icon name="trash" size={13}/>
+            </button>
+          </div>
+        ) : <span/>}
         {poem.date && <span className="meta">{fmtDate(poem.date)}</span>}
       </div>
       <button onClick={() => onOpen(poem)} style={A.cardTitleBtn}>
@@ -907,6 +921,7 @@ function Seguidos({ onOpen, onAuthor }) {
 
 function PoemView({ poem, onOpen, onAuthor, onBack }) {
   const { posts, users } = useDataCtx();
+  const { user, goEdit, goDelete } = useAuthCtx() || {};
   const author = useMemo(() => users.find(u => u.id === poem.authorId) || { id: poem.authorId, nome: "Autor", name: "Autor", accent: 200 }, [users, poem.authorId]);
   const siblings = useMemo(() => poemsByAuthor(posts, author.id, poem).slice(0, 2), [posts, author.id, poem]);
   const idx = posts.findIndex(p => p.id === poem.id);
@@ -935,6 +950,16 @@ function PoemView({ poem, onOpen, onAuthor, onBack }) {
           <button style={V.shareBtn} onClick={() => { if (navigator.share) navigator.share({ title: poem.title, text: poem.body.join("\n") }).catch(()=>{}); }}>
             <Icon name="share" size={16}/><span>Compartilhar</span>
           </button>
+          {user?.id === poem.authorId && (
+            <>
+              <button style={{ ...V.shareBtn }} onClick={() => goEdit && goEdit(poem)}>
+                <Icon name="edit" size={16}/><span>Editar</span>
+              </button>
+              <button style={{ ...V.shareBtn, borderColor: "oklch(0.85 0.06 24)", color: "oklch(0.52 0.16 24)" }} onClick={() => goDelete && goDelete(poem)}>
+                <Icon name="trash" size={16}/><span>Excluir</span>
+              </button>
+            </>
+          )}
         </div>
         <CommentSection poem={poem}/>
       </article>
@@ -1252,6 +1277,127 @@ function PublishView({ onBack, onDone }) {
   );
 }
 
+function EditPoemView({ poem, onBack, onDone }) {
+  const { user } = useAuthCtx();
+  const { reload } = useDataCtx();
+  const [title, setTitle] = useState(poem.title === "(sem título)" ? "" : poem.title);
+  const [text, setText] = useState(poem.body.join("\n"));
+  const [allowComments, setAllowComments] = useState(poem.ic_comment);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  const submit = async () => {
+    if (!title.trim() || !text.trim() || !user) return;
+    setSubmitting(true); setErr("");
+    try {
+      const raw = await api.posts.update(poem.id, {
+        id_post: poem.id, id_user_post: user.id,
+        txt_title: title.trim(), txt_post: text,
+        ic_comment: allowComments, created_at: poem.date || "",
+      });
+      await reload();
+      onDone(adaptPost(raw));
+    } catch {
+      setErr("Não foi possível salvar. Verifique a conexão com o servidor.");
+      setSubmitting(false);
+    }
+  };
+
+  const lines = text.split("\n");
+  return (
+    <main className="view-enter" style={V.page}>
+      <button onClick={onBack} style={V.backLink}><Icon name="arrowLeft" size={16}/><span>Voltar</span></button>
+      <div style={V.publishHead}>
+        <span className="kicker">Editar poema</span>
+        <h1 style={V.h1}>Revise seus versos</h1>
+      </div>
+      <div style={V.publishGrid}>
+        <div style={V.editor}>
+          <label style={A.label}>Título</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Sem título" style={V.fieldTitle}/>
+          <label style={{ ...A.label, marginTop: 26 }}>Versos</label>
+          <textarea value={text} onChange={e => setText(e.target.value)}
+            placeholder={"Escreva um verso por linha…\nA quebra de linha é sua pausa."} style={V.fieldBody} rows={12}/>
+          <label style={{
+            display: "flex", alignItems: "center", gap: 10, marginTop: 16, cursor: "pointer",
+            fontFamily: "var(--mono)", fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-faint)",
+          }}>
+            <input type="checkbox" checked={allowComments} onChange={e => setAllowComments(e.target.checked)}
+              style={{ width: 15, height: 15, accentColor: "var(--accent)" }}/>
+            Permitir comentários
+          </label>
+          {err && <p style={{ ...A.authErr, textAlign: "left", marginTop: 8 }}>{err}</p>}
+          <div style={V.publishActions}>
+            <span className="meta">{lines.filter(l => l.trim()).length} versos</span>
+            <button style={V.publishBtn} disabled={!title || !text || submitting} onClick={submit}>
+              {submitting ? <Spinner size={14}/> : "Salvar alterações"}
+            </button>
+          </div>
+        </div>
+        <div style={V.preview}>
+          <span className="kicker" style={{ marginBottom: 18, display: "block" }}>Pré-visualização</span>
+          <div style={V.previewCard}>
+            <div style={V.readMeta}><span className="meta">{fmtDate(poem.date)}</span></div>
+            <h2 style={{ ...V.readTitle, fontSize: "calc(34px * var(--type-scale))" }}>{title || "Sem título"}</h2>
+            <div style={V.readByline}>
+              <Avatar user={user} size={34}/>
+              <span style={{ fontFamily: "var(--serif)", fontSize: 15, fontWeight: 500 }}>{user.nome}</span>
+            </div>
+            <div style={{ ...V.poemBody, fontSize: "calc(19px * var(--type-scale))" }} className="ruled">
+              {(text ? lines : ["Seus versos aparecem aqui,", "em tempo real,", "enquanto você escreve."]).map((l, i) => (
+                <div key={i} style={{ minHeight: "calc(1.6em * var(--type-scale))", color: text ? "var(--ink)" : "var(--ink-faint)" }}>{l || " "}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function DeleteConfirmModal({ poem, onConfirm, onCancel }) {
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const esc = e => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", esc);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", esc); document.body.style.overflow = ""; };
+  }, []);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    await onConfirm();
+  };
+
+  return (
+    <div style={A.scrim} onMouseDown={onCancel}>
+      <div style={{ ...A.authCard, maxWidth: 400, textAlign: "center" }} onMouseDown={e => e.stopPropagation()}>
+        <h2 style={{ fontFamily: "var(--serif)", fontWeight: 400, fontSize: 26, color: "var(--ink)", margin: "0 0 12px" }}>
+          Excluir poema?
+        </h2>
+        <p style={{ fontFamily: "var(--serif)", fontSize: 17, color: "var(--ink-soft)", margin: "0 0 28px", lineHeight: 1.5 }}>
+          "<em>{poem.title}</em>" será removido permanentemente e não poderá ser recuperado.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button onClick={onCancel} disabled={deleting}
+            style={{ background: "none", border: "1px solid var(--rule)", color: "var(--ink-soft)",
+              padding: "10px 22px", borderRadius: 999, fontFamily: "var(--serif)", fontSize: 15, cursor: "pointer" }}>
+            Cancelar
+          </button>
+          <button onClick={handleConfirm} disabled={deleting}
+            style={{ background: "oklch(0.52 0.16 24)", color: "#fff", border: 0,
+              padding: "10px 22px", borderRadius: 999, fontFamily: "var(--serif)", fontSize: 15, fontWeight: 500,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+            {deleting ? <Spinner size={14}/> : <><Icon name="trash" size={15}/>Excluir</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const A = {
   logo:          { display: "flex", alignItems: "center", gap: 11, background: "none", border: 0, padding: 0 },
   logoMark:      { display: "flex", flexDirection: "column", gap: 3, width: 22, flex: "none" },
@@ -1502,6 +1648,7 @@ function App() {
   const [authReason, setAuthReason] = useState("");
   const authUser = useAuthUser();
 
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [appState, setAppState] = useState({ users: [], posts: [], loading: true, apiOk: true });
 
   const loadData = useCallback(async () => {
@@ -1543,8 +1690,23 @@ function App() {
 
   const goPublish = () => authUser ? nav("publish") : openAuth("Para publicar um poema, entre ou crie uma conta.");
   const goProfile = () => authUser ? nav("profile") : openAuth();
+  const goEdit    = p => nav("edit", { poem: p });
+  const goDelete  = p => setDeleteTarget(p);
 
-  const ctxValue = { user: authUser, openAuth, logout };
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget || !authUser) return;
+    try {
+      await api.posts.delete(deleteTarget.id, authUser.id);
+      const wasViewingPoem = route.name === "poem" && route.poem?.id === deleteTarget.id;
+      await loadData();
+      setDeleteTarget(null);
+      if (wasViewingPoem) nav("home");
+    } catch {
+      setDeleteTarget(null);
+    }
+  };
+
+  const ctxValue = { user: authUser, openAuth, logout, goEdit, goDelete };
   const dataValue = { ...appState, reload: loadData };
 
   let content;
@@ -1555,6 +1717,7 @@ function App() {
   else if (route.name === "author")   content = <AuthorView author={route.author} onOpen={p => nav("poem", { poem: p })} onAuthor={a => nav("author", { author: a })} onBack={() => nav("home")}/>;
   else if (route.name === "profile")  content = <MyProfile onOpen={p => nav("poem", { poem: p })} onAuthor={a => nav("author", { author: a })} onBack={() => nav("home")} onPublish={goPublish}/>;
   else if (route.name === "publish")  content = <PublishView onBack={() => nav("home")}/>;
+  else if (route.name === "edit")     content = <EditPoemView poem={route.poem} onBack={() => nav("poem", { poem: route.poem })} onDone={p => nav("poem", { poem: p })}/>;
 
   return (
     <DataContext.Provider value={dataValue}>
@@ -1569,6 +1732,7 @@ function App() {
         <Footer onPublish={goPublish}/>
         {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} onOpen={p => nav("poem", { poem: p })} onAuthor={a => nav("author", { author: a })}/>}
         {authOpen && <AuthModal reason={authReason} onClose={() => setAuthOpen(false)}/>}
+        {deleteTarget && <DeleteConfirmModal poem={deleteTarget} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteTarget(null)}/>}
         <TweaksPanel>
           <TweakSection label="Tema"/>
           <TweakToggle label="Modo escuro" value={t.dark} onChange={v => setTweak("dark", v)}/>
